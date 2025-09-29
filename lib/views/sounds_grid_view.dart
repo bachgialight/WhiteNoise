@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/foundation.dart';
 import '../viewmodels/white_noise_view_model.dart';
 import '../models/sound_model.dart';
 
@@ -11,7 +12,7 @@ class SoundsGridView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = Provider.of<WhiteNoiseViewModel>(context, listen: false);
+    final viewModel = Provider.of<WhiteNoiseViewModel>(context, listen: true);
 
     if (sounds.isEmpty) {
       return const Center(
@@ -25,14 +26,20 @@ class SoundsGridView extends StatelessWidget {
         crossAxisCount: 2,
         crossAxisSpacing: 16,
         mainAxisSpacing: 16,
-        childAspectRatio: 1,
+        childAspectRatio: 0.75,
       ),
       itemCount: sounds.length,
       itemBuilder: (context, index) {
         final sound = sounds[index];
-        final isPlaying =
-            viewModel.currentSound?.id == sound.id && viewModel.isPlaying;
+        final viewModel =
+            Provider.of<WhiteNoiseViewModel>(context, listen: false);
+        // Use the new method to check if this sound is playing
+        final isPlaying = viewModel.isSoundPlaying(sound);
         final isFavorite = viewModel.isFavorite(sound.id);
+
+        debugPrint('UI: Building item for ${sound.name} (${sound.id})');
+        debugPrint('UI: currentSound = ${viewModel.currentSound?.name}');
+        debugPrint('UI: isPlaying (calculated) = $isPlaying');
 
         return Card(
           elevation: 4,

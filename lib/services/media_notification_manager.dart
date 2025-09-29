@@ -15,6 +15,9 @@ class MediaNotificationManager {
   MediaService? _mediaService;
   bool _initialized = false;
 
+  /// Callback when the sound stops
+  Function()? onSoundStopped;
+
   /// Initializes the audio service
   Future<void> init() async {
     if (_initialized) return;
@@ -24,6 +27,15 @@ class MediaNotificationManager {
         builder: () => MediaService(),
       );
       _initialized = true;
+
+      // Set up the callback
+      if (_mediaService != null) {
+        _mediaService!.onSoundStopped = () {
+          if (onSoundStopped != null) {
+            onSoundStopped!();
+          }
+        };
+      }
     } catch (e) {
       debugPrint('Error initializing audio service: $e');
     }
@@ -31,14 +43,20 @@ class MediaNotificationManager {
 
   /// Plays a sound with media notification
   Future<void> playSound(Sound sound) async {
+    debugPrint('MediaNotificationManager: playSound called for ${sound.name}');
+
     if (!_initialized) {
+      debugPrint('MediaNotificationManager: Initializing audio service');
       await init();
     }
 
     try {
       // Play the sound through the media service
       if (_mediaService != null) {
+        debugPrint('MediaNotificationManager: Calling mediaService.playSound');
         await _mediaService!.playSound(sound);
+      } else {
+        debugPrint('MediaNotificationManager: Media service is null');
       }
     } catch (e) {
       debugPrint('Error playing sound with media notification: $e');
@@ -69,12 +87,26 @@ class MediaNotificationManager {
 
   /// Stops the current sound and stops the service
   Future<void> stopSound() async {
+    debugPrint('MediaNotificationManager: stopSound called');
+
     try {
       if (_mediaService != null) {
+        debugPrint('MediaNotificationManager: Calling mediaService.stop');
         await _mediaService!.stop();
+      } else {
+        debugPrint('MediaNotificationManager: Media service is null');
       }
     } catch (e) {
       debugPrint('Error stopping sound: $e');
+    }
+  }
+
+  /// Handles external stop (when stop is pressed from media notification)
+  void handleExternalStop() {
+    debugPrint('MediaNotificationManager: handleExternalStop called');
+    // Stop the main sound player through the callback
+    if (onSoundStopped != null) {
+      onSoundStopped!();
     }
   }
 

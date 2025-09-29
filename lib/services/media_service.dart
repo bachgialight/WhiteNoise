@@ -8,6 +8,9 @@ class MediaService extends BaseAudioHandler {
   final _player = AudioPlayer();
   Sound? _currentSound;
 
+  /// Callback when the sound stops
+  Function()? onSoundStopped;
+
   MediaService() {
     // Connect the player's state to the audio handler
     _player.playbackEventStream.listen((event) {
@@ -28,19 +31,20 @@ class MediaService extends BaseAudioHandler {
 
   /// Plays a sound
   Future<void> playSound(Sound sound) async {
+    debugPrint(
+        'MediaService: playSound called for ${sound.name} (${sound.id})');
+    debugPrint('MediaService: currentSound before = ${_currentSound?.name}');
+    debugPrint('MediaService: player.playing before = ${_player.playing}');
+
     // Stop current sound if playing
     if (_player.playing) {
+      debugPrint('MediaService: Stopping current sound');
       await _player.stop();
     }
 
     try {
-      // Load and play the new sound
-      await _player.setAsset(sound.assetPath);
-      _player.setLoopMode(LoopMode.one); // Loop indefinitely
-      await _player.play();
-      _currentSound = sound;
-
-      // Set media item
+      // Set media item BEFORE playing
+      debugPrint('MediaService: Setting media item for ${sound.name}');
       mediaItem.add(
         MediaItem(
           id: sound.id,
@@ -52,7 +56,18 @@ class MediaService extends BaseAudioHandler {
         ),
       );
 
+      // Load and play the new sound
+      debugPrint('MediaService: Loading asset ${sound.assetPath}');
+      await _player.setAsset(sound.assetPath);
+      _player.setLoopMode(LoopMode.one); // Loop indefinitely
+      await _player.play();
+      _currentSound = sound;
+
+      debugPrint(
+          'MediaService: Sound started, currentSound = ${_currentSound?.name}');
+
       // Update playback state
+      debugPrint('MediaService: Updating playback state to playing');
       playbackState.add(PlaybackState(
         controls: [
           MediaControl.pause,
@@ -70,10 +85,16 @@ class MediaService extends BaseAudioHandler {
   /// Pauses the current sound
   @override
   Future<void> pause() async {
+    debugPrint('MediaService: pause called');
+    debugPrint('MediaService: currentSound = ${_currentSound?.name}');
+    debugPrint('MediaService: player.playing = ${_player.playing}');
+
     if (_player.playing) {
+      debugPrint('MediaService: Pausing player');
       await _player.pause();
 
       // Update playback state
+      debugPrint('MediaService: Updating playback state to paused');
       playbackState.add(PlaybackState(
         controls: [
           MediaControl.play,
@@ -89,10 +110,16 @@ class MediaService extends BaseAudioHandler {
   /// Resumes the current sound
   @override
   Future<void> play() async {
+    debugPrint('MediaService: play (resume) called');
+    debugPrint('MediaService: currentSound = ${_currentSound?.name}');
+    debugPrint('MediaService: player.playing = ${_player.playing}');
+
     if (!_player.playing && _currentSound != null) {
+      debugPrint('MediaService: Resuming player');
       await _player.play();
 
       // Update playback state
+      debugPrint('MediaService: Updating playback state to playing');
       playbackState.add(PlaybackState(
         controls: [
           MediaControl.pause,
@@ -108,11 +135,17 @@ class MediaService extends BaseAudioHandler {
   /// Stops the current sound
   @override
   Future<void> stop() async {
+    debugPrint('MediaService: stop called');
+    debugPrint('MediaService: currentSound = ${_currentSound?.name}');
+    debugPrint('MediaService: player.playing = ${_player.playing}');
+
     if (_player.playing) {
+      debugPrint('MediaService: Stopping player');
       await _player.stop();
       _currentSound = null;
 
       // Update playback state
+      debugPrint('MediaService: Updating playback state to stopped');
       playbackState.add(PlaybackState(
         controls: [
           MediaControl.play,
@@ -121,6 +154,12 @@ class MediaService extends BaseAudioHandler {
         playing: false,
         updatePosition: Duration.zero,
       ));
+
+      // Notify the main app that the sound has stopped
+      if (onSoundStopped != null) {
+        debugPrint('MediaService: Notifying main app that sound has stopped');
+        onSoundStopped!();
+      }
     }
   }
 
